@@ -32,12 +32,19 @@ class User(UserMixin, db.Model):
 
 @app.route('/')
 def home():
+    if current_user.is_authenticated:
+        return redirect(url_for('secrets'))
     return render_template("index.html")
 
 
 @app.route('/register', methods=['POST', 'GET'])
 def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('secrets'))
     if request.method == 'POST':
+        if User.query.filter_by(email=request.form.get('email')).first():
+            flash('User already registered.')
+            return redirect(url_for('login'))
         password = request.form['password']
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
         new_user = User(email=request.form['email'], password=hashed_password, name=request.form['name'])
@@ -50,6 +57,8 @@ def register():
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('secrets'))
     if request.method == 'POST':
         get_user = User.query.filter_by(email=request.form.get('email')).first()
         if get_user:
@@ -59,6 +68,12 @@ def login():
                 user_pass = ""
                 login_user(get_user)
                 return redirect(url_for("secrets"))
+            else:
+                flash("Password wrong.")
+                return redirect(url_for("login"))
+        else:
+            flash("User not found. Please register first.")
+            return redirect(url_for("login"))
     return render_template("login.html")
 
 
